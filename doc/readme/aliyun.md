@@ -32,8 +32,42 @@ open-alydx=1
 ALY_DH_AccessKeyId=xxxxxxxxxxxxxxxxxxxxxx
 #阿里云电话接口密钥
 ALY_DH_AccessSecret=xxxxxxxxxxxxxxxxxxxxxx
-#阿里云电话被叫显号，必须是已购买的号码
+#阿里云电话被叫显号，必须是已购买的号码（为空则为使用阿里云公共号码池号码）
 ALY_DX_CalledShowNumber=xxxxxxxxx
 #阿里云电话文本转语音（TTS）模板ID
 ALY_DH_TtsCode=xxxxxxxx
 ```
+
+开启阿里云语音服务，并进行资质管理的认证以及语音通知模板的添加
+
+
+${code}内容默认为rules规则中description字段内容
+
+在AlertTemplate中添加阿里云电话模板
+
+
+
+```
+{{ range $k,$v:=.alerts }}故障主机{{$v.labels.appname}}{{$v.annotations.description}}{{ end }}
+```
+
+配置alertmanager的配置文件，指定路由规则，进行语音告警,使用prometheusalert接口，如下（部分配置内容）
+```
+  - receiver: 'prometheusalert-phone-db'
+    group_wait: 10s
+    match:
+      level: '4'
+      type: db
+
+receivers:
+- name: 'prometheusalert-phone-db'
+  webhook_configs:
+  - url: 'http://localhost:8080/prometheusalert?type=alydh&tpl=ali-phone&phone=136xxxx'
+    send_resolved: false
+```
+
+注意：
+
+1、阿里云已不支持专有号码进行拨打电话
+2、阿里云屏蔽带有IP信息的语音
+3、阿里云语音服务有流控 https://help.aliyun.com/document_detail/149826.html?spm=a2c4g.11186623.6.683.6cf54c07wo2zTO
